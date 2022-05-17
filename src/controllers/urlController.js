@@ -1,7 +1,7 @@
 const UrlModel = require('../model/urlModel')
 const validUrl = require('valid-url')
 const RandomString = require('randomstring')
-
+//=-----------------------Post Api------------------------
 const generateShortUrl = async function (req, res) {
     try {
         let data = req.body
@@ -29,5 +29,9 @@ const generateShortUrl = async function (req, res) {
         res.status(500).send({ status: false, message: err.message })
     }
 }
+//---------------------Get Api------------------------------
+
+
+
 
 module.exports = generateShortUrl
