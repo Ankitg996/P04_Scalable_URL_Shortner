@@ -23,6 +23,7 @@
     "mongoose": "^6.3.3",
     "nodemon": "^2.0.16",
     "randomstring": "^1.2.2",
+    "redis": "^3.1.2",
     "valid-url": "^1.0.9",
     "validator": "^13.7.0"
   }
