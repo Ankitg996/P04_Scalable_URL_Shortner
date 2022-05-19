@@ -24,12 +24,19 @@ redisClient.on("connect", async function () {
 const SET_ASYNC = promisify(redisClient.SET).bind(redisClient);
 const GET_ASYNC = promisify(redisClient.GET).bind(redisClient);
 
+const isValid = (value) => {
+    if(typeof value === 'undefined' || value === null) return false
+    if(typeof value === 'string' && value.trim().length === 0) return false
+    if(typeof value === 'number') return false
+    return true;
+}
+
 //-----------------------Post Api----------------------------------
 const generateShortUrl = async function (req, res) {
     try {
         let data = req.body
 
-        if (!Object.keys(data).length) return res.status(400).send({ status: false, message: " You must provide data first " })
+        if(!isValid(data.longUrl)) return res.status(400).send({ status: false, message: "Please provide long Url first! (type-string)" })
 
         if (!(validUrl.isWebUri(data.longUrl.trim()))) return res.status(400).send({ status: false, message: "Please Provide a valid long Url" })
 
