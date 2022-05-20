@@ -31,37 +31,72 @@ const isValid = (value) => {
     return true;
 }
 
-//-----------------------Post Api----------------------------------
-const generateShortUrl = async function (req, res) {
+//-----------------------Post Api--------------------------------
+
+const generateShortUrl = async (req, res) => {
     try {
-        let data = req.body
 
-        if(!isValid(data.longUrl)) return res.status(400).send({ status: false, message: "Please provide long Url first! (type-string)" })
+        /****************************************Validation**************************************/
+        const longUrl = req.body.longUrl
 
-        if (!(validUrl.isWebUri(data.longUrl.trim()))) return res.status(400).send({ status: false, message: "Please Provide a valid long Url" })
+        if(!isValid(longUrl)) return res.status(400).send({ status: false, message: "Please provide long Url first! (type-string)" })
+              
+        if (!(validUrl.isWebUri(longUrl.trim()))) return res.status(400).send({ status: false, message: "Please Provide a valid long Url" })
 
-        let checkUrl = await UrlModel.findOne({ longUrl: data.longUrl })
+      /****************************************Searching in Redis Server***********************************/  
+        let LongUrl = await GET_ASYNC(`${longUrl}`)
+        let LongUrlCache = JSON.parse(LongUrl)
+        if (LongUrlCache) return res.status(200).send({ status: true, msg: "Already a shortUrl exist with this Url in Cache", urlDetails: LongUrlCache })
 
-        if (checkUrl) return res.status(200).send({ status: true, data: checkUrl })
+       /****************************************Searching in Data base******************************/  
+        let url = await UrlModel.findOne({ longUrl: longUrl }).select({ longUrl: 1, shortUrl: 1, urlCode: 1, _id: 0 })
 
-        let shortUrlCode = RandomString.generate({ length: 6, charset: "alphabetic" }).toLowerCase()
+        // url exist and return the respose
+        if (url) {
+            await SET_ASYNC(`${longUrl}`,JSON.stringify(url))
+            return res.status(302).send({ status: true, msg: "Already a shortUrl exist with this Url in DB", urlDetails: url })
+        }
 
-        let shortUrl = `http://localhost:3000/${shortUrlCode}`
+        /****************************************Short urlCode Generation******************************/  
+        let urlCode = RandomString.generate({ length: 6, charset: "alphabetic" }).toLowerCase()
 
-        data.urlCode = shortUrlCode;
-        data.shortUrl = shortUrl;
+        let shortUrl = `http://localhost:3000/${urlCode}`
 
-        let createUrl = await UrlModel.create(data)
+        let data = {
+            urlCode: urlCode,
+            longUrl: longUrl,
+            shortUrl: shortUrl
+        }
+       
+        /****************************Creating document in DB****************************/
+        let urlDetails = await UrlModel.create(data)
 
-        await SET_ASYNC(`${shortUrlCode}`, JSON.stringify(createUrl))
+        let result = {
+            urlCode: urlDetails.urlCode,
+            longUrl: urlDetails.longUrl,
+            shortUrl: urlDetails.shortUrl
+        }
+        await SET_ASYNC(`${longUrl}`, JSON.stringify(result))
 
-        return res.status(201).send({ status: true, data: createUrl })
-
+        return res.status(201).send({ status: true, data: result })
     }
     catch (err) {
-        res.status(500).send({ status: false, message: err.message })
+        console.log(err)
+        res.status(500).send({ staus: false, error: err.message })
     }
+
 }
+
+const flushRedisCache = (req, res) => {
+    redisClient.flushall('ASYNC', (err, data) => {
+        if(err)
+            console.log(err)
+        else if(req.body) 
+            console.log("Memory flushed: ",req.body)
+    })
+    res.status(200).send({msg: "Redis memory cleared"})
+}
+
 //---------------------Get Api-----------------------------------
 
 const getUrl = async function (req, res) {
@@ -92,4 +127,4 @@ const getUrl = async function (req, res) {
     }
 }
 
-module.exports = { generateShortUrl, getUrl }
+module.exports = { generateShortUrl, getUrl, flushRedisCache }
