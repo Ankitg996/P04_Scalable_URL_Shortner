@@ -71,13 +71,13 @@ const getUrl = async function (req, res) {
         let catchedUrlData = await GET_ASYNC(`${data}`)
         let parseData = JSON.parse(catchedUrlData)
         
-        if(!parseData) return res.status(400).send({status: false, message: "Sort url doesn't exists!"})
+        if(!parseData) return res.status(404).send({status: false, message: "Sort url doesn't exists!"})
 
         if(catchedUrlData){
             res.status(302).redirect(302, `${parseData.longUrl}`)
         }else{
             let urlData = await UrlModel.findOne({urlCode: data})
-            if(!urlData) return res.status(400).send({status: false, message: "Sort url doesn't exists!"})
+            if(!urlData) return res.status(404).send({status: false, message: "Sort url doesn't exists!"})
 
             await SET_ASYNC(`${data}`, JSON.stringify(urlData))
 
